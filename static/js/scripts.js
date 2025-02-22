@@ -21,6 +21,8 @@ function updateTimerDisplay() {
 
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
+    const stretchBox = document.getElementById('stretch-box');
+    stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
     timerInterval = setInterval(() => {
         if (timeLeft > 0) {
             timeLeft--;
@@ -62,6 +64,14 @@ function resumeTimer() {
     }
 }
 
+function nextStretch() {
+    currentStretchIndex++;
+    resetTimer();
+    const stretchBox = document.getElementById('stretch-box');
+    stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
+    console.log('Next stretch');
+}
+
 updateTimerDisplay();
 
 async function runPoseTracking() {
@@ -73,12 +83,13 @@ async function runPoseTracking() {
     const net = await posenet.load();
     console.log('PoseNet model loaded');
 
-    setInterval(() => {detectPoses()}, 500);
+    setInterval(() => {detectPoses()}, 100);
 
     async function detectPoses() {
         const pose = await net.estimateSinglePose(video, {
             flipHorizontal: false
         });
+        stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (pose.score > 0.5) {
             detectionBox.style.backgroundColor = 'green';
@@ -87,14 +98,19 @@ async function runPoseTracking() {
             drawSkeleton(pose.keypoints, 0.5, ctx);
 
             if (!stretchFunctions[currentStretchIndex % stretches.length](pose)) {
-                stoptimer();
+                stopTimer();
+            }
+            if (!isTimerRunning && stretchFunctions[currentStretchIndex % stretches.length](pose)) {
+                resumeTimer();
+            }
+            if (timeLeft === 0) {
+                nextStretch();
             }
         } else {
             detectionBox.style.backgroundColor = 'red';
             console.log('No pose detected');
             stretchBox.textContent = 'No stretch detected';
         }
-        requestAnimationFrame(detectPoses);
     }
 }
 
@@ -145,8 +161,8 @@ function isNeckStretching(pose) {
         const leftShoulderY = leftShoulder.position.y;
         const rightShoulderY = rightShoulder.position.y;
 
-        const leftTilt = noseY < leftShoulderY - 10;
-        const rightTilt = noseY < rightShoulderY - 10;
+        const leftTilt = noseY < leftShoulderY - 20;
+        const rightTilt = noseY < rightShoulderY - 20;
 
         return leftTilt || rightTilt;
     }
