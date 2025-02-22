@@ -12,6 +12,8 @@ startVideo();
 
 let timerInterval;
 let timeLeft = 45;
+let currentStretchIndex = 0;
+const stretches = ['Arm stretching', 'Neck stretching', 'Side stretching', 'Forward bend'];
 
 function updateTimerDisplay() {
     document.getElementById('timer').textContent = timeLeft;
@@ -37,6 +39,29 @@ function resetTimer() {
     console.log('Timer reset');
 }
 
+function stopTimer() {
+    clearInterval(timerInterval);
+    isTimerRunning = false;
+    console.log('Timer stopped');
+}
+
+function resumeTimer() {
+    if (!isTimerRunning && timeLeft > 0) {
+        timerInterval = setInterval(() => {
+            if (timeLeft > 0) {
+                timeLeft--;
+                updateTimerDisplay();
+            } else {
+                clearInterval(timerInterval);
+                console.log('Timer ended without detecting the stretch 3 times.');
+                nextStretch();
+            }
+        }, 1000);
+        isTimerRunning = true;
+        console.log('Timer resumed');
+    }
+}
+
 updateTimerDisplay();
 
 async function runPoseTracking() {
@@ -44,10 +69,11 @@ async function runPoseTracking() {
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
     const detectionBox = document.getElementById('detection-box');
+    const stretchBox = document.getElementById('stretch-box');
     const net = await posenet.load();
     console.log('PoseNet model loaded');
 
-    setInterval(() => {detectPoses();}, 5000);
+    setInterval(() => {detectPoses()}, 5000);
 
     async function detectPoses() {
         const pose = await net.estimateSinglePose(video, {
@@ -60,26 +86,15 @@ async function runPoseTracking() {
             drawKeypoints(pose.keypoints, 0.5, ctx);
             drawSkeleton(pose.keypoints, 0.5, ctx);
 
-            if (isArmStretching(pose)) {
-                console.log('Arm stretching detected');
-                resetTimer();
-            }
-            if (isNeckStretching(pose)) {
-                console.log('Neck stretching detected');
-                resetTimer();
-            }
-            if (isSideStretching(pose)) {
-                console.log('Side stretching detected');
-                resetTimer();
-            }
-            if (isForwardBend(pose)) {
-                console.log('Forward bend detected');
-                resetTimer();
+            if (!stretchFunctions[currentStretchIndex % stretches.length](pose)) {
+                stoptimer();
             }
         } else {
             detectionBox.style.backgroundColor = 'red';
             console.log('No pose detected');
+            stretchBox.textContent = 'No stretch detected';
         }
+        requestAnimationFrame(detectPoses);
     }
 }
 
@@ -130,8 +145,8 @@ function isNeckStretching(pose) {
         const leftShoulderY = leftShoulder.position.y;
         const rightShoulderY = rightShoulder.position.y;
 
-        const leftTilt = noseY < leftShoulderY - 20;
-        const rightTilt = noseY < rightShoulderY - 20;
+        const leftTilt = noseY < leftShoulderY - 10;
+        const rightTilt = noseY < rightShoulderY - 10;
 
         return leftTilt || rightTilt;
     }
@@ -180,4 +195,11 @@ function isForwardBend(pose) {
     }
     return false;
 }
+
+const stretchFunctions = [
+    isArmStretching,
+    isNeckStretching,
+    isSideStretching,
+    isForwardBend
+];
 runPoseTracking();
