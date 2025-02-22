@@ -47,7 +47,7 @@ async function runPoseTracking() {
     const net = await posenet.load();
     console.log('PoseNet model loaded');
 
-    setInterval(() => {detectPoses()}, 500);
+    setInterval(() => {detectPoses();}, 5000);
 
     async function detectPoses() {
         const pose = await net.estimateSinglePose(video, {
@@ -59,11 +59,27 @@ async function runPoseTracking() {
             console.log('Pose detected');
             drawKeypoints(pose.keypoints, 0.5, ctx);
             drawSkeleton(pose.keypoints, 0.5, ctx);
+
+            if (isArmStretching(pose)) {
+                console.log('Arm stretching detected');
+                resetTimer();
+            }
+            if (isNeckStretching(pose)) {
+                console.log('Neck stretching detected');
+                resetTimer();
+            }
+            if (isSideStretching(pose)) {
+                console.log('Side stretching detected');
+                resetTimer();
+            }
+            if (isForwardBend(pose)) {
+                console.log('Forward bend detected');
+                resetTimer();
+            }
         } else {
             detectionBox.style.backgroundColor = 'red';
             console.log('No pose detected');
         }
-        requestAnimationFrame(detectPoses);
     }
 }
 
@@ -104,4 +120,64 @@ function toTuple({ y, x }) {
     return [y, x];
 }
 
+function isNeckStretching(pose) {
+    const nose = pose.keypoints.find(k => k.part === 'nose');
+    const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
+    const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
+
+    if (nose && leftShoulder && rightShoulder) {
+        const noseY = nose.position.y;
+        const leftShoulderY = leftShoulder.position.y;
+        const rightShoulderY = rightShoulder.position.y;
+
+        const leftTilt = noseY < leftShoulderY - 20;
+        const rightTilt = noseY < rightShoulderY - 20;
+
+        return leftTilt || rightTilt;
+    }
+    return false;
+}
+
+function isSideStretching(pose) {
+    const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
+    const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
+    const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
+    const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
+
+    if (leftShoulder && rightShoulder && leftHip && rightHip) {
+        const leftSideStretch = leftShoulder.position.x < leftHip.position.x;
+        const rightSideStretch = rightShoulder.position.x > rightHip.position.x;
+
+        return leftSideStretch || rightSideStretch;
+    }
+    return false;
+}
+
+function isArmStretching(pose) {
+    const leftWrist = pose.keypoints.find(k => k.part === 'leftWrist');
+    const rightWrist = pose.keypoints.find(k => k.part === 'rightWrist');
+    const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
+    const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
+
+    if (leftWrist && rightWrist && leftShoulder && rightShoulder) {
+        const leftArmRaised = leftWrist.position.y < leftShoulder.position.y;
+        const rightArmRaised = rightWrist.position.y < rightShoulder.position.y;
+
+        return leftArmRaised && rightArmRaised;
+    }
+    return false;
+}
+
+function isForwardBend(pose) {
+    const nose = pose.keypoints.find(k => k.part === 'nose');
+    const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
+    const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
+
+    if (nose && leftHip && rightHip) {
+        const forwardBend = nose.position.y > (leftHip.position.y + rightHip.position.y) / 2;
+
+        return forwardBend;
+    }
+    return false;
+}
 runPoseTracking();
