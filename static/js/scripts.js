@@ -47,12 +47,13 @@ async function runPoseTracking() {
     const net = await posenet.load();
     console.log('PoseNet model loaded');
 
+    setInterval(() => {detectPoses()}, 500);
+
     async function detectPoses() {
         const pose = await net.estimateSinglePose(video, {
             flipHorizontal: false
         });
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawCanvas(video, 0, 0, canvas.width, canvas.height);
         if (pose.score > 0.5) {
             detectionBox.style.backgroundColor = 'green';
             console.log('Pose detected');
@@ -64,8 +65,6 @@ async function runPoseTracking() {
         }
         requestAnimationFrame(detectPoses);
     }
-
-    detectPoses();
 }
 
 function drawKeypoints(keypoints, minConfidence, ctx, scale = 1) {
