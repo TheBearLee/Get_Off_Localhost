@@ -73,7 +73,7 @@ async function runPoseTracking() {
     const net = await posenet.load();
     console.log('PoseNet model loaded');
 
-    setInterval(() => {detectPoses()}, 5000);
+    setInterval(() => {detectPoses()}, 500);
 
     async function detectPoses() {
         const pose = await net.estimateSinglePose(video, {
