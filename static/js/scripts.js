@@ -11,8 +11,8 @@ async function startVideo() {
 startVideo();
 
 let timerInterval;
-let timeLeft = 45;
-let currentStretchIndex = 0;
+let timeLeft = 15;
+let currentStretchIndex = Math.floor(Math.random() * 4);
 const stretches = ['Arm stretching', 'Neck stretching', 'Side stretching', 'Forward bend'];
 
 function updateTimerDisplay() {
@@ -36,7 +36,7 @@ function startTimer() {
 
 function resetTimer() {
     clearInterval(timerInterval);
-    timeLeft = 45;
+    timeLeft = 15;
     updateTimerDisplay();
     console.log('Timer reset');
 }
@@ -152,17 +152,19 @@ function toTuple({ y, x }) {
 }
 
 function isNeckStretching(pose) {
-    const nose = pose.keypoints.find(k => k.part === 'nose');
+    const leftEar = pose.keypoints.find(k => k.part === 'leftEar');
+    const rightEar = pose.keypoints.find(k => k.part === 'rightEar');
     const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
     const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
 
-    if (nose && leftShoulder && rightShoulder) {
-        const noseY = nose.position.y;
+    if (leftEar && rightEar && leftShoulder && rightShoulder) {
+        const leftEarY = leftEar.position.y;
+        const rightEarY = rightEar.position.y;
         const leftShoulderY = leftShoulder.position.y;
         const rightShoulderY = rightShoulder.position.y;
 
-        const leftTilt = noseY < leftShoulderY - 20;
-        const rightTilt = noseY < rightShoulderY - 20;
+        const leftTilt = leftEarY < leftShoulderY + 30;
+        const rightTilt = rightEarY < rightShoulderY + 30;
 
         return leftTilt || rightTilt;
     }
@@ -176,7 +178,7 @@ function isSideStretching(pose) {
     const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
 
     if (leftShoulder && rightShoulder && leftHip && rightHip) {
-        const leftSideStretch = leftShoulder.position.x < leftHip.position.x;
+        const leftSideStretch = leftShoulder.position.x > leftHip.position.x;
         const rightSideStretch = rightShoulder.position.x > rightHip.position.x;
 
         return leftSideStretch || rightSideStretch;
