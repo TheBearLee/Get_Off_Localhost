@@ -3,7 +3,7 @@ async function startVideo() {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.getElementById('video');
         video.srcObject = stream;
-        console.log('Video stream started');
+        //console.log('Video stream started');
     } catch (error) {
         console.log('Error accessing the camera: ' + error);
     }
@@ -13,6 +13,7 @@ startVideo();
 let timerInterval;
 let timeLeft = 15;
 let currentStretchIndex = Math.floor(Math.random() * 4);
+let stretchCount = 1;
 const stretches = ['Arm stretching', 'Neck stretching', 'Side stretching', 'Forward bend'];
 
 function updateTimerDisplay() {
@@ -31,20 +32,20 @@ function startTimer() {
             clearInterval(timerInterval);
         }
     }, 1000);
-    console.log('Timer started');
+    //console.log('Timer started');
 }
 
 function resetTimer() {
     clearInterval(timerInterval);
     timeLeft = 15;
     updateTimerDisplay();
-    console.log('Timer reset');
+    //console.log('Timer reset');
 }
 
 function stopTimer() {
     clearInterval(timerInterval);
     isTimerRunning = false;
-    console.log('Timer stopped');
+    //console.log('Timer stopped');
 }
 
 function resumeTimer() {
@@ -55,17 +56,18 @@ function resumeTimer() {
                 updateTimerDisplay();
             } else {
                 clearInterval(timerInterval);
-                console.log('Timer ended without detecting the stretch 3 times.');
+                //console.log('Timer ended without detecting the stretch 3 times.');
                 nextStretch();
             }
         }, 1000);
         isTimerRunning = true;
-        console.log('Timer resumed');
+        //console.log('Timer resumed');
     }
 }
 
 function nextStretch() {
     currentStretchIndex++;
+    stretchCount++;
     resetTimer();
     const stretchBox = document.getElementById('stretch-box');
     stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
@@ -81,7 +83,7 @@ async function runPoseTracking() {
     const detectionBox = document.getElementById('detection-box');
     const stretchBox = document.getElementById('stretch-box');
     const net = await posenet.load();
-    console.log('PoseNet model loaded');
+    //console.log('PoseNet model loaded');
 
     setInterval(() => {detectPoses()}, 100);
 
@@ -93,19 +95,24 @@ async function runPoseTracking() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (pose.score > 0.5) {
             detectionBox.style.backgroundColor = 'green';
-            console.log('Pose detected');
+            //console.log('Pose detected');
             drawKeypoints(pose.keypoints, 0.5, ctx);
             drawSkeleton(pose.keypoints, 0.5, ctx);
 
             if (!stretchFunctions[currentStretchIndex % stretches.length](pose)) {
                 stopTimer();
             }
-            if (!isTimerRunning && stretchFunctions[currentStretchIndex % stretches.length](pose)) {
+            if (stretchCount >= 3) {
+                stretchBox.textContent = 'You have completed all the stretches for today!';
+                stopTimer();
+            }
+            else if (!isTimerRunning && stretchFunctions[currentStretchIndex % stretches.length](pose)) {
                 resumeTimer();
             }
             if (timeLeft === 0) {
                 nextStretch();
             }
+            
         } else {
             detectionBox.style.backgroundColor = 'red';
             console.log('No pose detected');
@@ -163,8 +170,9 @@ function isNeckStretching(pose) {
         const leftShoulderY = leftShoulder.position.y;
         const rightShoulderY = rightShoulder.position.y;
 
-        const leftTilt = leftEarY < leftShoulderY + 30;
-        const rightTilt = rightEarY < rightShoulderY + 30;
+        //console.log("----------", leftEarY, leftShoulderY)
+        const leftTilt = (leftShoulderY - leftEarY) <= 90;
+        const rightTilt = (rightShoulderY - rightEarY) <= 90;
 
         return leftTilt || rightTilt;
     }
@@ -178,8 +186,8 @@ function isSideStretching(pose) {
     const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
 
     if (leftShoulder && rightShoulder && leftHip && rightHip) {
-        const leftSideStretch = leftShoulder.position.x > leftHip.position.x;
-        const rightSideStretch = rightShoulder.position.x > rightHip.position.x;
+        const leftSideStretch = (leftHip.position.y - leftShoulder.position.y) > 150;
+        const rightSideStretch =  (rightHip.position.y - rightShoulder.position.y) > 150;
 
         return leftSideStretch || rightSideStretch;
     }
@@ -202,14 +210,16 @@ function isArmStretching(pose) {
 }
 
 function isForwardBend(pose) {
-    const nose = pose.keypoints.find(k => k.part === 'nose');
+    const leftElbow = pose.keypoints.find(k => k.part === 'elbow');
+    const rightElbow = pose.keypoints.find(k => k.part === 'elbow');
     const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
     const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
 
-    if (nose && leftHip && rightHip) {
-        const forwardBend = nose.position.y > (leftHip.position.y + rightHip.position.y) / 2;
+    if (leftElbow && rightElbow && leftHip && rightHip) {
+        const forwardBendLeft = (leftElbow.position.y - leftHip.position.y) + 150;
+        const forwardBendRight = (rightElbow.position.y - rightHip.position.y) + 150;
 
-        return forwardBend;
+        return forwardBendLeft && forwardBendRight;
     }
     return false;
 }
