@@ -3,7 +3,7 @@ async function startVideo() {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
         const video = document.getElementById('video');
         video.srcObject = stream;
-        //console.log('Video stream started');
+        console.log('Video stream started');
     } catch (error) {
         console.log('Error accessing the camera: ' + error);
     }
@@ -12,9 +12,10 @@ startVideo();
 
 let timerInterval;
 let timeLeft = 15;
+let isTimerRunning = false;
 let currentStretchIndex = Math.floor(Math.random() * 4);
 let stretchCount = 1;
-const stretches = ['Arm stretching', 'Neck stretching', 'Side stretching', 'Forward bend'];
+const stretches = ['Arm stretching', 'Neck stretching', 'Arm circles'];
 
 function updateTimerDisplay() {
     document.getElementById('timer').textContent = timeLeft;
@@ -23,6 +24,7 @@ function updateTimerDisplay() {
 function startTimer() {
     if (timerInterval) clearInterval(timerInterval);
     const stretchBox = document.getElementById('stretch-box');
+    isTimerRunning = true;
     stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
     timerInterval = setInterval(() => {
         if (timeLeft > 0) {
@@ -32,20 +34,20 @@ function startTimer() {
             clearInterval(timerInterval);
         }
     }, 1000);
-    //console.log('Timer started');
+    console.log('Timer started');
 }
 
 function resetTimer() {
     clearInterval(timerInterval);
     timeLeft = 15;
     updateTimerDisplay();
-    //console.log('Timer reset');
+    console.log('Timer reset');
 }
 
 function stopTimer() {
     clearInterval(timerInterval);
     isTimerRunning = false;
-    //console.log('Timer stopped');
+    console.log('Timer stopped');
 }
 
 function resumeTimer() {
@@ -56,12 +58,12 @@ function resumeTimer() {
                 updateTimerDisplay();
             } else {
                 clearInterval(timerInterval);
-                //console.log('Timer ended without detecting the stretch 3 times.');
+                console.log('Timer ended without detecting the stretch 3 times.');
                 nextStretch();
             }
         }, 1000);
         isTimerRunning = true;
-        //console.log('Timer resumed');
+        console.log('Timer resumed');
     }
 }
 
@@ -80,10 +82,10 @@ async function runPoseTracking() {
     const video = document.getElementById('video');
     const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-    const detectionBox = document.getElementById('detection-box');
+    const detectionBar = document.getElementById('detection-bar');
     const stretchBox = document.getElementById('stretch-box');
     const net = await posenet.load();
-    //console.log('PoseNet model loaded');
+    console.log('PoseNet model loaded');
 
     setInterval(() => {detectPoses()}, 100);
 
@@ -94,8 +96,8 @@ async function runPoseTracking() {
         stretchBox.textContent = stretches[currentStretchIndex % stretches.length];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         if (pose.score > 0.5) {
-            detectionBox.style.backgroundColor = 'green';
-            //console.log('Pose detected');
+            detectionBar.style.backgroundColor = 'green';
+            console.log('Pose detected');
             drawKeypoints(pose.keypoints, 0.5, ctx);
             drawSkeleton(pose.keypoints, 0.5, ctx);
 
@@ -114,7 +116,7 @@ async function runPoseTracking() {
             }
             
         } else {
-            detectionBox.style.backgroundColor = 'red';
+            detectionBar.style.backgroundColor = 'red';
             console.log('No pose detected');
             stretchBox.textContent = 'No stretch detected';
         }
@@ -178,21 +180,6 @@ function isNeckStretching(pose) {
     return false;
 }
 
-function isSideStretching(pose) {
-    const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
-    const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
-    const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
-    const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
-
-    if (leftShoulder && rightShoulder && leftHip && rightHip) {
-        const leftSideStretch = (leftHip.position.y - leftShoulder.position.y) > 150;
-        const rightSideStretch =  (rightHip.position.y - rightShoulder.position.y) > 150;
-
-        return leftSideStretch || rightSideStretch;
-    }
-    return false;
-}
-
 function isArmStretching(pose) {
     const leftWrist = pose.keypoints.find(k => k.part === 'leftWrist');
     const rightWrist = pose.keypoints.find(k => k.part === 'rightWrist');
@@ -208,17 +195,17 @@ function isArmStretching(pose) {
     return false;
 }
 
-function isArmcross(pose) {
+function isArmCircles(pose) {
     const leftWrist = pose.keypoints.find(k => k.part === 'leftWrist');
     const rightWrist = pose.keypoints.find(k => k.part === 'rightWrist');
     const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
     const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
 
     if (leftWrist && rightWrist && leftShoulder && rightShoulder) {
-        const crossLeft = (leftWrist.position.x > rightShoulder.position.x);
-        const crossRight = (rightWrist.position.x < leftShoulder.position.x);
+        const leftArmHorizontal = Math.abs(leftWrist.position.y - leftShoulder.position.y) < 20;
+        const rightArmHorizontal = Math.abs(rightWrist.position.y - rightShoulder.position.y) < 20;
 
-        return crossLeft || crossRight;
+        return leftArmHorizontal && rightArmHorizontal;
     }
     return false;
 }
@@ -226,7 +213,6 @@ function isArmcross(pose) {
 const stretchFunctions = [
     isArmStretching,
     isNeckStretching,
-    isSideStretching,
-    isArmcross
+    isArmCircles
 ];
 runPoseTracking();
