@@ -170,7 +170,6 @@ function isNeckStretching(pose) {
         const leftShoulderY = leftShoulder.position.y;
         const rightShoulderY = rightShoulder.position.y;
 
-        //console.log("----------", leftEarY, leftShoulderY)
         const leftTilt = (leftShoulderY - leftEarY) <= 90;
         const rightTilt = (rightShoulderY - rightEarY) <= 90;
 
@@ -209,17 +208,17 @@ function isArmStretching(pose) {
     return false;
 }
 
-function isForwardBend(pose) {
-    const leftElbow = pose.keypoints.find(k => k.part === 'elbow');
-    const rightElbow = pose.keypoints.find(k => k.part === 'elbow');
-    const leftHip = pose.keypoints.find(k => k.part === 'leftHip');
-    const rightHip = pose.keypoints.find(k => k.part === 'rightHip');
+function isArmcross(pose) {
+    const leftWrist = pose.keypoints.find(k => k.part === 'leftWrist');
+    const rightWrist = pose.keypoints.find(k => k.part === 'rightWrist');
+    const leftShoulder = pose.keypoints.find(k => k.part === 'leftShoulder');
+    const rightShoulder = pose.keypoints.find(k => k.part === 'rightShoulder');
 
-    if (leftElbow && rightElbow && leftHip && rightHip) {
-        const forwardBendLeft = (leftElbow.position.y - leftHip.position.y) + 150;
-        const forwardBendRight = (rightElbow.position.y - rightHip.position.y) + 150;
+    if (leftWrist && rightWrist && leftShoulder && rightShoulder) {
+        const crossLeft = (leftWrist.position.x > rightShoulder.position.x);
+        const crossRight = (rightWrist.position.x < leftShoulder.position.x);
 
-        return forwardBendLeft && forwardBendRight;
+        return crossLeft || crossRight;
     }
     return false;
 }
@@ -228,6 +227,6 @@ const stretchFunctions = [
     isArmStretching,
     isNeckStretching,
     isSideStretching,
-    isForwardBend
+    isArmcross
 ];
 runPoseTracking();
