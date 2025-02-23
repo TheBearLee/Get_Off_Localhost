@@ -36,7 +36,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>Welcome to the Flask Website</h1>
+        <div class="detection-bar" id="detection-bar"></div> <!-- Updated detection box to bar -->
         <div class="video-container">
             <video id="video" width="640" height="480" autoplay></video>
             <canvas id="canvas" width="640" height="480"></canvas>
@@ -44,10 +44,7 @@
         <div id="log-container"></div> <!-- Added log container -->
         <div class="timer-container">
             <span id="timer">45</span>
-            <button onclick="startTimer()">Start Timer</button>
-            <button onclick="resetTimer()">Reset Timer</button>
         </div>
-        <div class="detection-bar" id="detection-bar"></div> <!-- Updated detection box to bar -->
         <div class="stretch-box" id="stretch-box">No stretch detected</div> <!-- Updated stretch box -->
     </div>
     <script src="/static/js/scripts.js"></script> <!-- Added script reference -->
